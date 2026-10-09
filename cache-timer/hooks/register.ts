@@ -16,19 +16,24 @@ function ttl(): Ttl {
   return override ?? seenTtl ?? envTtl ?? (isSubscription ? '1h' : '5m')
 }
 
-// Transcript timestamps mark when a response was written, a little after its request started.
+// Transcript timestamps mark when a response was written, after its request started,
+// so they only seed `lastAt` until a live `turn.step` records a request start.
 async function readTranscript($: EngineInterface): Promise<void> {
   const ran = await $.process.run(['sh', '-c', TAIL, 'sh', await $.session.id()])
   if (ran.exitCode !== 0) return
   const found = fromTranscript(ran.stdout)
-  if (found.lastAt !== null && (lastAt === null || found.lastAt > lastAt)) lastAt = found.lastAt
+  if (lastAt === null) lastAt = found.lastAt
   if (found.ttl !== null) seenTtl = found.ttl
+}
+
+function isSet(value: string | undefined): boolean {
+  return value !== undefined && value !== '' && value !== '0' && value.toLowerCase() !== 'false'
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    if (await $.env.get('FORCE_PROMPT_CACHING_5M')) envTtl = '5m'
-    else if (await $.env.get('ENABLE_PROMPT_CACHING_1H')) envTtl = '1h'
+    if (isSet(await $.env.get('FORCE_PROMPT_CACHING_5M'))) envTtl = '5m'
+    else if (isSet(await $.env.get('ENABLE_PROMPT_CACHING_1H'))) envTtl = '1h'
 
     await $.command.register({
       name: 'cache-ttl',
@@ -68,6 +73,7 @@ export const register: Register = on => {
     return result
   })
 
+  // TurnUsage does not split cache writes by TTL, so the transcript is read for it after each turn.
   on('turn.complete', async ($, e, next) => {
     await readTranscript($).catch(() => {})
 
