@@ -1,0 +1,1 @@
+{ "name": "cache-timer", "version": "0.1.0", "description": "Status line bar counting down until the session's prompt cache expires" }

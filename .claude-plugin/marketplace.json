@@ -1,0 +1,11 @@
+{
+  "name": "claude-mods",
+  "owner": { "name": "David Mohl", "email": "git@d.sh" },
+  "plugins": [
+    {
+      "name": "cache-timer",
+      "source": "./cache-timer",
+      "description": "Status line bar counting down until the session's prompt cache expires"
+    }
+  ]
+}
